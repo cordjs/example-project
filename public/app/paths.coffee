@@ -8,8 +8,9 @@ define [],  ->
     'widgetInitializer':  './bundles/cord/core/widgetInitializer'
 
     'Behaviour':          './bundles/cord/core/Behaviour'
-    'clientSideRouter':   './bundles/cord/core/clientSideRouter'
-    'serverSideRouter':   './bundles/cord/core/serverSideRouter'
+
+    'cord-helper':   './bundles/cord/core/requirejs/cord-helper'
+    'cord':   './bundles/cord/core/requirejs/cord'
 
     # plugins
 #    'cord': './vendor/requirejs/plugins/cord'

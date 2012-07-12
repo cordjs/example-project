@@ -1,6 +1,6 @@
 define [
   'Behaviour'
-  'clientSideRouter'
+  'cord!/cord/core/clientSideRouter'
 ], (Behaviour, Router) ->
 
   class ButtonBehaviour extends Behaviour

@@ -1,8 +1,7 @@
 define [
   'jquery'
   'Behaviour'
-  'clientSideRouter'
-], ($, Behaviour, router) ->
+], ($, Behaviour) ->
 
   class LayoutBehaviour extends Behaviour
 
