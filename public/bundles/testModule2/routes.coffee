@@ -2,26 +2,20 @@
 
 define [], ->
 
-  '/tab:activeTabId':
+  '/tab2:activeTabId':
+    regex: false
+    action: 'default'
+    params:
+     someParam: 11
+
+  '/module2/tab:activeTabId':
     regex: false
     action: 'default'
     params:
       someParam: 11
 
-  '/module/tab:activeTabId':
+  '/module2/space:activeTabId':
     regex: false
     action: 'default'
     params:
-      someParam: 11
-
-  '/module/space:activeTabId':
-    regex: false
-    action: 'default'
-    params:
-      someParam: 11
-#      activeTabId:
-#        type: 'int'
-#        validate: /\d+/
-
-#  '/simple/:number':
-#    widget: './simpleLayout/SimpleLayout'
+     someParam: 11

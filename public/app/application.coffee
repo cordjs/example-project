@@ -3,15 +3,19 @@
 define [
   "cord!/testModule/config"
   "cord!/cord/core/#{ ( if window? then 'clientSideRouter' else 'serverSideRouter' ) }"
-], (config, router) ->
+  "underscore"
+], (config, router, _) ->
 
-  require.config
-    paths:
-      'ProjectNS':    './bundles/testModule'
+  bundles = [
+    'cord!/testModule/config'
+#    'cord!/testModule2/config'
+  ]
 
-#  modules = 'TestModule'
+  require bundles, () ->
+    routes = {};
+    _.extend routes, bundle.routes for bundle in arguments
 
-  router.addRoutes config.routes
-  router.setDefWidget config.defWidget if config.defWidget?
+    router.addRoutes routes
+#    router.setDefWidget config.defWidget if config.defWidget?
 
   router
