@@ -1,5 +1,5 @@
 define [
-  'Behaviour'
+  'cordBehaviour'
   'cord!/cord/core/clientSideRouter'
 ], (Behaviour, Router) ->
 

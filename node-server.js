@@ -6,7 +6,7 @@
    * To change this template use File | Settings | File Templates.
    */
 
-  var paths = require('./public/app/paths');
+  var paths = require('./public/bundles/cord/core/config-paths');
   requirejs = require('requirejs');
   requirejs.config({
     nodeRequire: require,

@@ -2,7 +2,7 @@
 
 define [
   'dustjs-linkedin'
-  'Widget'
+  'cordWidget'
 ], (dust, Widget) ->
 
   class Layout extends Widget
