@@ -6,13 +6,13 @@
    * To change this template use File | Settings | File Templates.
    */
 
-  var paths = require('./public/bundles/cord/core/config-paths');
+  var configPaths = require('./public/bundles/cord/core/configPaths');
   requirejs = require('requirejs');
   requirejs.config({
     nodeRequire: require,
     baseUrl: 'public'
   });
-  requirejs.config( paths );
+  requirejs.config( configPaths );
 
   var http = require('http');
   var static = require('node-static');
