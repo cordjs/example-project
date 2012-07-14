@@ -2,7 +2,7 @@
 
 define [
   "cord!/testModule/config"
-  "cord!/cord/core/#{ ( if window? then 'clientSideRouter' else 'serverSideRouter' ) }"
+  "cord!/cord/core/router/#{ ( if window? then 'clientSideRouter' else 'serverSideRouter' ) }"
   "underscore"
 ], (config, router, _) ->
 
