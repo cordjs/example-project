@@ -10,8 +10,6 @@ define [
     cssClass: 'b-button'
     rootTag: 'span'
 
-    path: '/testModule//tabContent/button'
-
     _defaultAction: (params, callback) ->
       @ctx.number = params.number ? 1
       callback()

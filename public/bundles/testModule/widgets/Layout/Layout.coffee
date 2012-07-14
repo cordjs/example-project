@@ -7,8 +7,6 @@ define [
 
   class Layout extends Widget
 
-    path: '/testModule//Layout'
-
     _defaultAction: (params, callback) ->
       @ctx.setDeferred 'activeTab'
       @ctx.set

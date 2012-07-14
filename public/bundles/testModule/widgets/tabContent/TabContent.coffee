@@ -7,9 +7,6 @@ define [
 
   class TabContent extends Widget
 
-#    path: 'bundles/TestSite/widgets/tabContent/'
-    path: '/testModule//tabContent'
-
     _defaultAction: (params, callback) ->
       @ctx.set 'activeTab', params.activeTabId
       if params.activeTabId == '2'
