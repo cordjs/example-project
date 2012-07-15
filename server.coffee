@@ -1,3 +1,5 @@
+`if (typeof define !== 'function') { define = require('amdefine')(module) }`
+
 configPaths = require './public/bundles/cord/core/configPaths'
 requirejs = require 'requirejs'
 requirejs.config
