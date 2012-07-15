@@ -10,7 +10,7 @@ http = require 'http'
 serverStatic = require 'node-static'
 
 requirejs [
-  'app/application'
+  'cord!/cord/core/appManager'
 ], (application) ->
     file = new serverStatic.Server './public/'
 
