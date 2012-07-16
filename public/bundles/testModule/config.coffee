@@ -22,4 +22,4 @@ define [], () ->
       params:
        someParam: 11
 
-  'defWidget': '/testModule//Layout'
+#  'defWidget': '/testModule//Layout'
