@@ -10,6 +10,8 @@ define [
 
     _defaultAction: (params, callback) ->
       @ctx.number = params.number ? 1
+      @ctx.sourceJson = params.sourceJson ? {}
+
       callback()
 
 
