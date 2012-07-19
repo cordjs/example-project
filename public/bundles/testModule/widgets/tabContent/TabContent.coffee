@@ -1,13 +1,17 @@
 define [
   'dustjs-linkedin'
   'cordWidget'
-#  'cord!//TabContent/TabContentModel'
-], (dust, Widget, Model) ->
+  'cord!//TabContent/TabContentModel'
+], (dust, Widget, TabContentModel) ->
 
 
   class TabContent extends Widget
 
     _defaultAction: (params, callback) ->
+
+      if window?
+        @testModel()
+
       @ctx.set 'activeTab', params.activeTabId
       if params.activeTabId == '2'
 
@@ -39,5 +43,41 @@ define [
             'tags':                 'tag614'
         }, ( body ) =>
           @ctx.setSingle 'sourceContent', body
+
+    testModel: ->
+
+      TabContentModel.bind "error", (rec, msg) ->
+        console.log "TabContentModel failed to save - " + msg
+
+      TabContentModel.bind "create", (newRecord) ->
+        console.log 'create record: ', newRecord
+
+      contact = new TabContentModel
+        firstname: "Test"
+        lastname: "me"
+
+      contact.save()
+
+      console.log 'Model: ', contact.id
+      console.log 'exists: ', TabContentModel.exists( contact.id )
+
+      console.log 'contact.firstname: ', contact.firstname
+
+      contact = TabContentModel.create lastname: "Polo"
+      #  console.log 'contact.firstname: ', contact.firstname
+      #  contact.save()
+      contact.firstname = "Marko"
+      console.log 'contact.firstname: ', contact.firstname
+      contact.save()
+
+      console.log 'contact.firstname: ', contact.firstname
+      console.log 'contact.id: ', contact.id
+
+      console.log 'TabContentModel.first(): ', TabContentModel.first().firstname
+
+      contacts = TabContentModel.all()
+      console.log 'TabContentModel.all(): ', contacts
+
+      console.log contact.attributes()
 
   TabContent
