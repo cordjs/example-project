@@ -1,13 +1,16 @@
 define [
   'dustjs-linkedin'
   'cordWidget'
-], (dust, Widget) ->
+#  'cord!//TabContent/TabContentModel'
+], (dust, Widget, Model) ->
+
 
   class TabContent extends Widget
 
     _defaultAction: (params, callback) ->
       @ctx.set 'activeTab', params.activeTabId
       if params.activeTabId == '2'
+
         @ctx.setDeferred 'buttonNumber', 'sourceContent'
 
         setTimeout =>
