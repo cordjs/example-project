@@ -1,4 +1,5 @@
 define [], () ->
   [
-    'cord!/testModule/config'
+    'testModule'
+#    'testModule2'
   ]
