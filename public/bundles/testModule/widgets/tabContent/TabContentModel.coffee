@@ -1,5 +1,5 @@
 define [
-  'cordModel'
+  'cord!Model'
 ], (Model) ->
 
   class TabContentModel extends Model

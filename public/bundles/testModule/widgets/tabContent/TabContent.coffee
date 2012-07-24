@@ -1,6 +1,6 @@
 define [
   'dustjs-linkedin'
-  'cordWidget'
+  'cord!Widget'
   'cord!//TabContent/TabContentModel'
 ], (dust, Widget, TabContentModel) ->
 
@@ -26,7 +26,7 @@ define [
 
     getSource: ->
       require [
-        'cord!/cord/core/Rest'
+        'cord!Rest'
       ], (Rest) =>
 
         Rest.post

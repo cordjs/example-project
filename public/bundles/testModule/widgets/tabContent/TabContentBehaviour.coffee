@@ -1,5 +1,5 @@
 define [
-  'cordBehaviour'
+  'cord!Behaviour'
   'jquery'
 ], (Behaviour, $) ->
 

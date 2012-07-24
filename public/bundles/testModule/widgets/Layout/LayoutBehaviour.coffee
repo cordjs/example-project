@@ -1,6 +1,6 @@
 define [
   'jquery'
-  'cordBehaviour'
+  'cord!Behaviour'
 ], ($, Behaviour) ->
 
   class LayoutBehaviour extends Behaviour
