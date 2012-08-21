@@ -1,5 +1,4 @@
 .idea/*
-/*.js
 public/*.js
 public/button/*.js
 public/simpleLayout/*.js
@@ -16,3 +15,5 @@ public/bundles/*/*/*/*.js
 public/bundles/*/*/*/*/*.js
 public/bundles/cord/core/
 target/*
+
+server.js
