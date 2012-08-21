@@ -14,5 +14,5 @@ public/bundles/*/*.js
 public/bundles/*/*/*.js
 public/bundles/*/*/*/*.js
 public/bundles/*/*/*/*/*.js
-
 public/bundles/cord/core/
+target/*
