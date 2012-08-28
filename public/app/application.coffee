@@ -1,5 +1,5 @@
 define [], () ->
   [
     'testModule'
-#    'testModule2'
+    'testModule2'
   ]
