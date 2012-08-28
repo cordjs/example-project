@@ -15,5 +15,6 @@ public/bundles/*/*/*/*.js
 public/bundles/*/*/*/*/*.js
 public/bundles/cord/core/
 target/*
+node_modules/cordjs
 
 server.js
