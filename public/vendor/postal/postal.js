@@ -2,12 +2,12 @@
  postal.js
  Author: Jim Cowart
  License: Dual licensed MIT (http://www.opensource.org/licenses/mit-license) & GPL (http://www.opensource.org/licenses/gpl-license)
- Version 0.6.3
+ Version 0.7.0
  */
 
-// This is the amd-module version of postal.js
-// If you need the standard lib style version, go to http://github.com/ifandelse/postal.js
-define( ["underscore"], function ( _, undefined ) {
+// This is the node.js version of postal.js
+// If you need the standard or amd client lib version, go to http://github.com/ifandelse/postal.js
+var _ = require( 'underscore' );
 
 var DEFAULT_CHANNEL = "/",
 	DEFAULT_PRIORITY = 50,
@@ -238,11 +238,13 @@ var bindingsResolver = {
 		if ( this.cache[topic] && this.cache[topic][binding] ) {
 			return true;
 		}
-		//  binding.replace(/\./g,"\\.")             // escape actual periods
-		//         .replace(/\*/g, ".*")             // asterisks match any value
-		//         .replace(/#/g, "[A-Z,a-z,0-9]*"); // hash matches any alpha-numeric 'word'
-		var rgx = new RegExp( "^" + binding.replace( /\./g, "\\." ).replace( /\*/g, ".*" ).replace( /#/g, "[A-Z,a-z,0-9]*" ) + "$" ),
-			result = rgx.test( topic );
+		var pattern = ("^" + binding.replace( /\./g, "\\." )            // escape actual periods
+									.replace( /\*/g, "[A-Z,a-z,0-9]*" ) // asterisks match any alpha-numeric 'word'
+									.replace( /#/g, ".*" ) + "$")       // hash matches 'n' # of words (+ optional on start/end of topic)
+									.replace( "\\..*$", "(\\..*)*$" )   // fix end of topic matching on hash wildcards
+									.replace( "^.*\\.", "^(.*\\.)*" );  // fix beginning of topic matching on hash wildcards
+		var rgx = new RegExp( pattern );
+		var result = rgx.test( topic );
 		if ( result ) {
 			if ( !this.cache[topic] ) {
 				this.cache[topic] = {};
@@ -456,13 +458,13 @@ var postal = {
 			destinations = [destinations];
 		}
 		_.each( sources, function ( source ) {
-			var sourceTopic = source.topic || "*";
+			var sourceTopic = source.topic || "#";
 			_.each( destinations, function ( destination ) {
 				var destChannel = destination.channel || DEFAULT_CHANNEL;
 				result.push(
 					postal.subscribe( {
 						channel : source.channel || DEFAULT_CHANNEL,
-						topic : source.topic || "*",
+						topic : source.topic || "#",
 						callback : function ( data, env ) {
 							var newEnv = env;
 							newEnv.topic = _.isFunction( destination.topic ) ? destination.topic( env.topic ) : destination.topic || env.topic;
@@ -506,5 +508,4 @@ var postal = {
 	}
 };
 
-	return postal;
-} );
+module.exports = postal;
