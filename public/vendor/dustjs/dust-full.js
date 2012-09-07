@@ -160,7 +160,6 @@ Context.prototype.getPath = function(cur, down) {
       len = down.length;
 
   if (cur && len === 0) return ctx.head;
-  if (!ctx.isObject) return undefined;
   ctx = ctx.head;
   var i = 0;
   while(ctx && i < len) {
@@ -171,12 +170,6 @@ Context.prototype.getPath = function(cur, down) {
 };
 
 Context.prototype.push = function(head, idx, len) {
-  if( head ){
-   // loop index for a block section
-   head['$idx'] = idx;
-   // loop size for a block section
-   head['$len'] = len;
-  }
   return new Context(new Stack(head, this.stack, idx, len), this.global, this.blocks);
 };
 
@@ -275,10 +268,16 @@ Stream.prototype.flush = function() {
 };
 
 Stream.prototype.emit = function(type, data) {
-  var events = this.events;
-
-  if (events && events[type]) {
-    events[type](data);
+  if (!this.events) return false;
+  var handler = this.events[type];
+  if (!handler) return false;
+  if (typeof handler == 'function') {
+    handler(data);
+  } else {
+    var listeners = handler.slice(0);
+    for (var i = 0, l = listeners.length; i < l; i++) {
+      listeners[i](data);
+    }
   }
 };
 
@@ -286,7 +285,13 @@ Stream.prototype.on = function(type, callback) {
   if (!this.events) {
     this.events = {};
   }
-  this.events[type] = callback;
+  if (!this.events[type]) {
+    this.events[type] = callback;
+  } else if(typeof this.events[type] === 'function') {
+    this.events[type] = [this.events[type], callback];
+  } else {
+    this.events[type].push(callback);
+  }
   return this;
 };
 
@@ -360,7 +365,9 @@ Chunk.prototype.render = function(body, context) {
 
 Chunk.prototype.reference = function(elem, context, auto, filters) {
   if (typeof elem === "function") {
-    elem = elem(this, context, null, {auto: auto, filters: filters});
+    elem.isReference = true;
+    // Changed the function calling to use apply with the current context to make sure that "this" is wat we expect it to be inside the function
+    elem = elem.apply(context.current(), [this, context, null, {auto: auto, filters: filters}]);
     if (elem instanceof Chunk) {
       return elem;
     }
@@ -374,7 +381,7 @@ Chunk.prototype.reference = function(elem, context, auto, filters) {
 
 Chunk.prototype.section = function(elem, context, bodies, params) {
   if (typeof elem === "function") {
-    elem = elem(this, context, bodies, params);
+    elem = elem.apply(context.current(), [this, context, bodies, params]);
     if (elem instanceof Chunk) {
       return elem;
     }
@@ -390,15 +397,26 @@ Chunk.prototype.section = function(elem, context, bodies, params) {
   if (dust.isArray(elem)) {
     if (body) {
       var len = elem.length, chunk = this;
+      context.stack.head['$len'] = len;
       for (var i=0; i<len; i++) {
+        context.stack.head['$idx'] = i;
         chunk = body(chunk, context.push(elem[i], i, len));
       }
+      context.stack.head['$idx'] = undefined;
+      context.stack.head['$len'] = undefined;
       return chunk;
     }
   } else if (elem === true) {
     if (body) return body(this, context);
   } else if (elem || elem === 0) {
-    if (body) return body(this, context.push(elem));
+    if (body) {
+      context.stack.head['$idx'] = 0;
+      context.stack.head['$len'] = 1;
+      chunk = body(this, context.push(elem));
+      context.stack.head['$idx'] = undefined;
+      context.stack.head['$len'] = undefined;
+      return chunk;
+    }
   } else if (skip) {
     return skip(this, context);
   }
@@ -549,6 +567,7 @@ dust.escapeJs = function(s) {
 })(dust);
 
 if (typeof exports !== "undefined") {
+  //TODO: Remove the helpers from dust core in the next release.
   dust.helpers = require("./dust-helpers").helpers;
   if (typeof process !== "undefined") {
       require('./server')(dust);
@@ -559,7 +578,7 @@ if (typeof exports !== "undefined") {
 
 /* make a safe version of console if it is not available
  * currently supporting:
- *   _console.log 
+ *   _console.log
  * */
 var _console = (typeof console !== 'undefined')? console: {
   log: function(){
@@ -569,16 +588,17 @@ var _console = (typeof console !== 'undefined')? console: {
 
 function isSelect(context) {
   var value = context.current();
-  return typeof value === "object" && value.isSelect === true;    
+  return typeof value === "object" && value.isSelect === true;   
 }
 
 function filter(chunk, context, bodies, params, filter) {
   var params = params || {},
-      actual, expected;
+      actual,
+      expected;
   if (params.key) {
-    actual = context.get(params.key);
+    actual = helpers.tap(params.key, chunk, context);
   } else if (isSelect(context)) {
-    actual = context.current().value;
+    actual = context.current().selectKey;
     if (context.current().isResolved) {
       filter = function() { return false; };
     }
@@ -624,6 +644,7 @@ var helpers = {
   idx: function(chunk, context, bodies) {
     return bodies.block(chunk, context.push(context.stack.index));
   },
+  
   contextDump: function(chunk, context, bodies) {
     _console.log(JSON.stringify(context.stack));
     return chunk;
@@ -635,17 +656,29 @@ var helpers = {
     var output = input;
     // dust compiles a string to function, if there are references
     if( typeof input === "function"){
-      output = '';
-      chunk.tap(function(data){
-        output += data;
-        return '';
-      }).render(input, context).untap();
-      if( output === '' ){
-        output = false;
+      if( ( typeof input.isReference !== "undefined" ) && ( input.isReference === true ) ){ // just a plain function, not a dust `body` function
+        output = input();
+      } else {
+        output = '';
+        chunk.tap(function(data){
+          output += data;
+          return '';
+        }).render(input, context).untap();
+        if( output === '' ){
+          output = false;
+        }
       }
-    } 
+    }
     return output;
   },
+
+  /**
+  if helper 
+   @param cond, either a string literal value or a dust reference
+                a string literal value, is enclosed in double quotes, e.g. cond="2>3"
+                a dust reference is also enclosed in double quotes, e.g. cond="'{val}'' > 3"
+    cond argument should evaluate to a valid javascript expression
+   **/
 
   "if": function( chunk, context, bodies, params ){
     if( params && params.cond ){
@@ -661,19 +694,27 @@ var helpers = {
     }
     // no condition
     else {
-      _console.log( "NO condition given in the if helper!" );
+      _console.log( "No condition given in the if helper!" );
     }
     return chunk;
   },
+  
+   /**
+   select/eq/lt/lte/gt/gte/default helper
+   @param key, either a string literal value or a dust reference
+                a string literal value, is enclosed in double quotes, e.g. key="foo"
+                a dust reference may or may not be enclosed in double quotes, e.g. key="{val}" and key=val are both valid
+   @param type (optiona), supported types are  number, boolean, string, date, context, defaults to string
+   **/
   select: function(chunk, context, bodies, params) {
     if( params && params.key){
-      var key = params.key;
-      key = this.tap(key, chunk, context);
-      return chunk.render(bodies.block, context.push({ isSelect: true, isResolved: false, value: context.get(key) }));
+      // returns given input as output, if the input is not a dust reference, else does a context lookup
+      var key = this.tap(params.key, chunk, context);
+      return chunk.render(bodies.block, context.push({ isSelect: true, isResolved: false, selectKey: key }));
     }
     // no key
     else {
-      _console.log( "No key given for the select tag!" );
+      _console.log( "No key given in the select helper!" );
     }
     return chunk;
   },
@@ -698,8 +739,26 @@ var helpers = {
     return filter(chunk, context, bodies, params, function(expected, actual) { return actual >= expected; });
   },
 
-  "else": function(chunk, context, bodies, params) {
+  "default": function(chunk, context, bodies, params) {
     return filter(chunk, context, bodies, params, function(expected, actual) { return true; });
+  },
+  size: function( chunk, context, bodies, params ) {
+    var subject = params.subject; 
+    var value   = 0;
+    if (!subject) { //undefined, "", 0
+      value = 0;  
+    } else if(dust.isArray(subject)) { //array 
+      value = subject.length;  
+    } else if (!isNaN(subject)) { //numeric values  
+      value = subject;  
+    } else if (Object(subject) === subject) { //object test
+      var nr = 0;  
+      for(var k in subject) if(Object.hasOwnProperty.call(subject,k)) nr++;  
+        value = nr;
+    } else { 
+      value = (subject + '').length; //any other value (strings etc.)  
+    } 
+    return chunk.write(value); 
   }
 };
 
@@ -832,7 +891,7 @@ function compileBlocks(context) {
       blocks = context.blocks;
 
   for (var name in blocks) {
-    out.push(name + ":" + blocks[name]);
+    out.push("'" + name + "':" + blocks[name]);
   }
   if (out.length) {
     context.blocks = "ctx=ctx.shiftBlocks(blocks);";
@@ -1100,8 +1159,8 @@ var parser = (function(){
         "integer": parse_integer,
         "path": parse_path,
         "key": parse_key,
-        "nestedKey": parse_nestedKey,
         "array": parse_array,
+        "array_part": parse_array_part,
         "inline": parse_inline,
         "inline_part": parse_inline_part,
         "buffer": parse_buffer,
@@ -2246,7 +2305,7 @@ var parser = (function(){
         result0 = parse_key();
         result0 = result0 !== null ? result0 : "";
         if (result0 !== null) {
-          result2 = parse_nestedKey();
+          result2 = parse_array_part();
           if (result2 === null) {
             result2 = parse_array();
           }
@@ -2254,7 +2313,7 @@ var parser = (function(){
             result1 = [];
             while (result2 !== null) {
               result1.push(result2);
-              result2 = parse_nestedKey();
+              result2 = parse_array_part();
               if (result2 === null) {
                 result2 = parse_array();
               }
@@ -2277,7 +2336,7 @@ var parser = (function(){
             d = d[0]; 
             if (k && d) {
               d.unshift(k);
-              return [false, d];;
+              return [false, d];
             }
             return [true, d];
           })(pos0.offset, pos0.line, pos0.column, result0[0], result0[1]);
@@ -2287,6 +2346,7 @@ var parser = (function(){
         }
         if (result0 === null) {
           pos0 = clone(pos);
+          pos1 = clone(pos);
           if (input.charCodeAt(pos.offset) === 46) {
             result0 = ".";
             advance(pos, 1);
@@ -2297,7 +2357,35 @@ var parser = (function(){
             }
           }
           if (result0 !== null) {
-            result0 = (function(offset, line, column) { return [true, []] })(pos0.offset, pos0.line, pos0.column);
+            result1 = [];
+            result2 = parse_array_part();
+            if (result2 === null) {
+              result2 = parse_array();
+            }
+            while (result2 !== null) {
+              result1.push(result2);
+              result2 = parse_array_part();
+              if (result2 === null) {
+                result2 = parse_array();
+              }
+            }
+            if (result1 !== null) {
+              result0 = [result0, result1];
+            } else {
+              result0 = null;
+              pos = clone(pos1);
+            }
+          } else {
+            result0 = null;
+            pos = clone(pos1);
+          }
+          if (result0 !== null) {
+            result0 = (function(offset, line, column, d) {
+              if (d.length > 0) {
+                return [true, d[0]];
+              }
+              return [true, []] 
+            })(pos0.offset, pos0.line, pos0.column, result0[1]);
           }
           if (result0 === null) {
             pos = clone(pos0);
@@ -2328,24 +2416,24 @@ var parser = (function(){
         }
         if (result0 !== null) {
           result1 = [];
-          if (/^[0-9a-zA-Z_$]/.test(input.charAt(pos.offset))) {
+          if (/^[0-9a-zA-Z_$\-]/.test(input.charAt(pos.offset))) {
             result2 = input.charAt(pos.offset);
             advance(pos, 1);
           } else {
             result2 = null;
             if (reportFailures === 0) {
-              matchFailed("[0-9a-zA-Z_$]");
+              matchFailed("[0-9a-zA-Z_$\\-]");
             }
           }
           while (result2 !== null) {
             result1.push(result2);
-            if (/^[0-9a-zA-Z_$]/.test(input.charAt(pos.offset))) {
+            if (/^[0-9a-zA-Z_$\-]/.test(input.charAt(pos.offset))) {
               result2 = input.charAt(pos.offset);
               advance(pos, 1);
             } else {
               result2 = null;
               if (reportFailures === 0) {
-                matchFailed("[0-9a-zA-Z_$]");
+                matchFailed("[0-9a-zA-Z_$\\-]");
               }
             }
           }
@@ -2372,7 +2460,108 @@ var parser = (function(){
         return result0;
       }
       
-      function parse_nestedKey() {
+      function parse_array() {
+        var result0, result1, result2;
+        var pos0, pos1, pos2, pos3;
+        
+        reportFailures++;
+        pos0 = clone(pos);
+        pos1 = clone(pos);
+        pos2 = clone(pos);
+        pos3 = clone(pos);
+        if (input.charCodeAt(pos.offset) === 91) {
+          result0 = "[";
+          advance(pos, 1);
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("\"[\"");
+          }
+        }
+        if (result0 !== null) {
+          if (/^[0-9]/.test(input.charAt(pos.offset))) {
+            result2 = input.charAt(pos.offset);
+            advance(pos, 1);
+          } else {
+            result2 = null;
+            if (reportFailures === 0) {
+              matchFailed("[0-9]");
+            }
+          }
+          if (result2 !== null) {
+            result1 = [];
+            while (result2 !== null) {
+              result1.push(result2);
+              if (/^[0-9]/.test(input.charAt(pos.offset))) {
+                result2 = input.charAt(pos.offset);
+                advance(pos, 1);
+              } else {
+                result2 = null;
+                if (reportFailures === 0) {
+                  matchFailed("[0-9]");
+                }
+              }
+            }
+          } else {
+            result1 = null;
+          }
+          if (result1 !== null) {
+            if (input.charCodeAt(pos.offset) === 93) {
+              result2 = "]";
+              advance(pos, 1);
+            } else {
+              result2 = null;
+              if (reportFailures === 0) {
+                matchFailed("\"]\"");
+              }
+            }
+            if (result2 !== null) {
+              result0 = [result0, result1, result2];
+            } else {
+              result0 = null;
+              pos = clone(pos3);
+            }
+          } else {
+            result0 = null;
+            pos = clone(pos3);
+          }
+        } else {
+          result0 = null;
+          pos = clone(pos3);
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, line, column, a) {return a.join('')})(pos2.offset, pos2.line, pos2.column, result0[1]);
+        }
+        if (result0 === null) {
+          pos = clone(pos2);
+        }
+        if (result0 !== null) {
+          result1 = parse_array_part();
+          result1 = result1 !== null ? result1 : "";
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = clone(pos1);
+          }
+        } else {
+          result0 = null;
+          pos = clone(pos1);
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, line, column, i, nk) { if(nk) { nk.unshift(i); } else {nk = [i] } return nk; })(pos0.offset, pos0.line, pos0.column, result0[0], result0[1]);
+        }
+        if (result0 === null) {
+          pos = clone(pos0);
+        }
+        reportFailures--;
+        if (reportFailures === 0 && result0 === null) {
+          matchFailed("array");
+        }
+        return result0;
+      }
+      
+      function parse_array_part() {
         var result0, result1, result2;
         var pos0, pos1, pos2, pos3;
         
@@ -2466,108 +2655,7 @@ var parser = (function(){
         }
         reportFailures--;
         if (reportFailures === 0 && result0 === null) {
-          matchFailed("nestedKey");
-        }
-        return result0;
-      }
-      
-      function parse_array() {
-        var result0, result1, result2;
-        var pos0, pos1, pos2, pos3;
-        
-        reportFailures++;
-        pos0 = clone(pos);
-        pos1 = clone(pos);
-        pos2 = clone(pos);
-        pos3 = clone(pos);
-        if (input.charCodeAt(pos.offset) === 91) {
-          result0 = "[";
-          advance(pos, 1);
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("\"[\"");
-          }
-        }
-        if (result0 !== null) {
-          if (/^[0-9]/.test(input.charAt(pos.offset))) {
-            result2 = input.charAt(pos.offset);
-            advance(pos, 1);
-          } else {
-            result2 = null;
-            if (reportFailures === 0) {
-              matchFailed("[0-9]");
-            }
-          }
-          if (result2 !== null) {
-            result1 = [];
-            while (result2 !== null) {
-              result1.push(result2);
-              if (/^[0-9]/.test(input.charAt(pos.offset))) {
-                result2 = input.charAt(pos.offset);
-                advance(pos, 1);
-              } else {
-                result2 = null;
-                if (reportFailures === 0) {
-                  matchFailed("[0-9]");
-                }
-              }
-            }
-          } else {
-            result1 = null;
-          }
-          if (result1 !== null) {
-            if (input.charCodeAt(pos.offset) === 93) {
-              result2 = "]";
-              advance(pos, 1);
-            } else {
-              result2 = null;
-              if (reportFailures === 0) {
-                matchFailed("\"]\"");
-              }
-            }
-            if (result2 !== null) {
-              result0 = [result0, result1, result2];
-            } else {
-              result0 = null;
-              pos = clone(pos3);
-            }
-          } else {
-            result0 = null;
-            pos = clone(pos3);
-          }
-        } else {
-          result0 = null;
-          pos = clone(pos3);
-        }
-        if (result0 !== null) {
-          result0 = (function(offset, line, column, a) {return a.join('')})(pos2.offset, pos2.line, pos2.column, result0[1]);
-        }
-        if (result0 === null) {
-          pos = clone(pos2);
-        }
-        if (result0 !== null) {
-          result1 = parse_nestedKey();
-          result1 = result1 !== null ? result1 : "";
-          if (result1 !== null) {
-            result0 = [result0, result1];
-          } else {
-            result0 = null;
-            pos = clone(pos1);
-          }
-        } else {
-          result0 = null;
-          pos = clone(pos1);
-        }
-        if (result0 !== null) {
-          result0 = (function(offset, line, column, i, nk) { if(nk) { nk.unshift(i); } else {nk = [i] } return nk; })(pos0.offset, pos0.line, pos0.column, result0[0], result0[1]);
-        }
-        if (result0 === null) {
-          pos = clone(pos0);
-        }
-        reportFailures--;
-        if (reportFailures === 0 && result0 === null) {
-          matchFailed("array");
+          matchFailed("array_part");
         }
         return result0;
       }
