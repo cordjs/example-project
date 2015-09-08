@@ -1,5 +1,3 @@
-define [], () ->
-  [
-    'testModule'
-    'testModule2'
-  ]
+define -> [
+  'hello/example'
+]

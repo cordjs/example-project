@@ -1,0 +1,20 @@
+{
+  "name": "curly",
+  "version": "0.6.2",
+  "description": "a http request module for node and the browser",
+  "keywords": [
+    "request",
+    "https",
+    "http"
+  ],
+  "author": {
+    "name": "Mathias Buus Madsen",
+    "email": "mathiasbuus@gmail.com"
+  },
+  "readme": "# curly\n\nAn extendable request module for node.js and the browser.\nIt's available through npm\n\n\tnpm install curly\n\nThe goal of this module is to bring the core power of [request](https://github.com/mikeal/request) to both the browser and to Node combined with an extension interface to make client implementations of REST APIs simple.\n\n## Usage:\n\nCore usage is almost identical to [request](https://github.com/mikeal/request)\n\n``` js\nvar curly = require('curly');\n\ncurly('http://google.com', callback); // callback is called with (err, response, body)\ncurly.get('http://google.com', callback); // above is sugar for this\n\ncurly('http://google.com', {hello:'world'}, callback);\n\n// we expect a JSON callback\ncurly('https://some-json-service.com', {json:true, query:{meh:'bar'}}, callback);\n\n// send some custom headers\ncurly('http://google.com', {headers:{'user-agent':'curly'}}, callback);\n\n// streaming! (only works in Node)\ninputStream.pipe(curly.put('http://file-upload-service.com/meh')).pipe(outputStream);\n```\n\n## Extensions\n\nThe real power of curly lies in its extension interface. If you want to implement a REST API simply use the `use` method to extend curly.\n\n``` js\nvar curly = require('curly');\nvar myapi = curly.use(function(options) {\n\toptions.url = 'http://myapi.com'+options.url;\n\n\tvar req = curly(options);\n\t\n\treq.once('open', function() {\n\t\t// this function is called just before the request is started\n\t\treq.setHeader('Authorization', 'some signing stuff here');\n\t});\n\treturn req;\n});\n\nmyapi('/hello', function(err, res, body) {\n\t// this request went to 'http://myapi.com/hello'\n});\n```\n\n## Browser usage\n\nCurly (with the exception of streaming) works in the browser as well. `browser.js` exposes a `common.js` browserbased version.\nUsing a tool like [browserify](https://github.com/substack/node-browserify) you should be able to just `var curly = require('curly')`.\n\n## License\n\n**This software is licensed under \"MIT\"**\n\n> Copyright (c) 2012 Mathias Buus Madsen <mathiasbuus@gmail.com>\n> \n> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n> \n> The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n> \n> THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.",
+  "_id": "curly@0.6.2",
+  "dist": {
+    "shasum": "bfd8bddfc9f184b6bb7e9795588e14a0de6566a5"
+  },
+  "_from": "curly"
+}

@@ -1,20 +1,19 @@
 .idea/*
-public/*.js
-public/button/*.js
-public/simpleLayout/*.js
-public/mainLayout/*.js
-public/tabContent/*.js
-public/Cord/*.js
-.idea/*
-.sass-cache/*
-public/app/*.js
-public/bundles/*.js
-public/bundles/*/*.js
-public/bundles/*/*/*.js
-public/bundles/*/*/*/*.js
-public/bundles/*/*/*/*/*.js
-public/bundles/cord/core/
-target/*
-node_modules/cordjs
+.DS_Store
 
-server.js
+target/*
+
+public/bundles/cord/
+
+conf/*
+!conf/default.js
+!conf/developer.js
+
+# Almost all of node modules are ignored. Exclusion only for patched libraries
+node_modules/*
+!node_modules/curly
+!node_modules/postal
+!node_modules/monologue.js
+!node_modules/requirejs
+
+npm-debug.log
