@@ -1,3 +1,1 @@
-define -> [
-  'hello/example'
-]
+define -> []
