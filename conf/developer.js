@@ -55,9 +55,5 @@ module.exports = {
       errorTrace: true,
       appendConsoleCallTrace: true
     }
-  },
-
-  node: {
-    secrets: 'secrets-developer-example.js'
   }
 };
